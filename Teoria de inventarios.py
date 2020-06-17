@@ -1,6 +1,9 @@
 import math # Funciones matematicas
 import tkinter as tk # interfaz Grafica
 import tkinter.scrolledtext as tkst
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from random import randint
 
 #Definicion de Variables
 
@@ -30,6 +33,7 @@ class TeoriaInventarios():
         self.tiempo=0
         self.cantEcon=0
         self.costoTendencia=0
+        self.nPeriodo=0
         
     def setTiempo(self,tiempo):
             self.tiempo=tiempo
@@ -55,13 +59,13 @@ class TeoriaInventarios():
             self.tasaMan=tasaMan
                 
    
-    def eoqFija(self,costoTendencia,tiempo,costoTotal,demandaA,demandaP,costoUnid,cantidad,costoSepara,nuePedido,plazoRepo,costoAManten,tasaMan):
+    def eoqFija(self,costoTendencia,tiempo,demandaA,demandaP,costoUnid,costoSepara,nuePedido,plazoRepo,costoAManten,tasaMan):
         self.tiempo=tiempo
-        self.costoTotal=costoTotal
+        self.costoTotal=0
         self.demandaA=demandaA
         self.demandaP=demandaP
         self.costoUnid=costoUnid
-        self.cantidad=cantidad
+        self.cantidad=0
         self.costoSepara=costoSepara
         self.nuePedido=nuePedido
         self.plazoRepo=plazoRepo
@@ -69,34 +73,61 @@ class TeoriaInventarios():
         self.tasaMan=tasaMan
         self.costoTendencia=costoTendencia
 
-                
+    def conFaltantes(self,deficit):
+        self.maxFaltante=0
+        self.canEcoFalt=0   
+        self.deficit=deficit          
     
     def catidadEconmica (self):
         if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
             if self.costoAManten==0:
                 self.costoMantenimiento();
         self.cantEcon=math.ceil(math.sqrt((2*self.demandaA*self.costoSepara)/self.costoAManten))
-        return "•La cantidad que debe ordenarse es de "+str(self.cantEcon)+" unidades"
+        return "• La cantidad que debe ordenarse es de "+str(self.cantEcon)+" unidades"
 
     def costoMantenimiento(self):
-        self.costoAManten=self.costoTendencia*self.tiempo;
+        self.costoAManten=self.costoTendencia*self.costoUnid;
         
 
     def nuevoPedido(self,demandaP,plazoRepo):
+       self.tiempoPedidos()
        if demandaP==0:
-           demandaP=self.demandaA/self.tiempo
-       return "•El nuevo pedido se debe hacer cundo haya minimo " +str(math.ceil(demandaP*plazoRepo))+ " unidades"
+           demandaP=self.demandaP/(self.tiempo*360)
+       return "• El nuevo pedido se debe hacer cundo haya minimo " +str(math.ceil(demandaP*self.plazoRepo))+ " unidades"
 
     def plazoReemplazo(self,demandaA):
-       self.plazoRepo= math.ceil(demandaA/self.cantEcon)
-       return "•Numero de pedidos por año es de " +str(self.plazoRepo)
+       self.nPeriodo= math.ceil(demandaA/self.cantEcon)
+       return "• Numero de pedidos por año es de " +str(self.nPeriodo)
 
     def tiempoPedidos(self):
-        return self.cantEcon/self.demandaA
+        self.plazoRepo=self.cantEcon/self.demandaA
+        return self.plazoRepo
 
     def costeTotal(self):
-        self.costoTotal=self.costoUnid*self.demandaA+(self.costoSepara*self.plazoRepo)+self.costoAManten*(self.cantEcon/2)
+        self.costoTotal=self.costoUnid*self.demandaA+(self.costoSepara*self.nPeriodo)+self.costoAManten*(self.cantEcon/2)
         return self.costoTotal
+
+    def canEconFalta(self):
+        if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
+            if self.costoAManten==0:
+                self.costoMantenimiento();
+        self.cantEcon=math.ceil(math.sqrt((2*self.costoSepara*self.demandaA*(self.deficit+self.costoAManten))/((self.deficit*self.costoAManten))))
+        return "• La cantidad optima que debe ordenarse es de "+str(self.cantEcon)+" unidades"
+
+
+    def maxconFalta(self):
+        if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
+            if self.costoAManten==0:
+                self.costoMantenimiento();
+        self.maxFaltante=math.ceil(math.sqrt((2*self.costoSepara*self.demandaA*self.costoAManten)/(self.deficit*(self.deficit+self.costoAManten))))
+        return "• La cantidad optima de unidades agotadas es de "+str(self.maxFaltante)+" unidades"
+
+  
+    def costoTotalFalta(self):
+        self.costoTotal=(self.costoUnid*self.demandaA)+(self.costoSepara*self.nPeriodo)+(self.costoAManten*(pow((self.cantEcon-self.maxFaltante),2)/2))+((pow(self.maxFaltante,2)/self.cantEcon)*self.deficit)/2
+        return "Para un costo Total de "+str(self.costoTotal)
+
+
         
             
 
@@ -118,16 +149,16 @@ class Ventana():
         lbTitulo.place(x=10,y=10)
 
         #Creando un label para el campo de texto "question"
-        lbcostoTotal = tk.Label(self.frame, text="Costo Total", padx=10 )
-        lbcostoTotal.grid(row=1, column=0, sticky=tk.W)
+        #lbcostoTotal = tk.Label(self.frame, text="Costo Total", padx=10 )
+       # lbcostoTotal.grid(row=1, column=0, sticky=tk.W)
         lbdemandaA = tk.Label(self.frame, text="Demanda Anual", padx=10 )
         lbdemandaA.grid(row=2, column=0, sticky=tk.W)
         lbdemandaP = tk.Label(self.frame, text="Demanda Promedio", padx=10 )
         lbdemandaP.grid(row=3, column=0, sticky=tk.W)
         lbcostoUnid = tk.Label(self.frame, text="Costo Unitario", padx=10 )
         lbcostoUnid.grid(row=4, column=0, sticky=tk.W)
-        lbcantidad = tk.Label(self.frame, text="Cantidad", padx=10 )
-        lbcantidad.grid(row=5, column=0, sticky=tk.W)
+        #lbcantidad = tk.Label(self.frame, text="Cantidad", padx=10 )
+        #lbcantidad.grid(row=5, column=0, sticky=tk.W)
         lbcostoSepara = tk.Label(self.frame, text="Costo de Orden", padx=10 )
         lbcostoSepara.grid(row=6, column=0, sticky=tk.W)
         lbplazoRepo = tk.Label(self.frame, text="PlazoRepo", padx=10 )
@@ -138,17 +169,17 @@ class Ventana():
         lbtasaMan.grid(row=10, column=0, sticky=tk.W)
         lbtiempo = tk.Label(self.frame, text="tiempo", padx=10 )
         lbtiempo.grid(row=11, column=0, sticky=tk.W)
-        lbcantEcon = tk.Label(self.frame, text="cantidad economica", padx=10 )
-        lbcantEcon.grid(row=12, column=0, sticky=tk.W)
+        lbDeficit = tk.Label(self.frame, text="costo Deficit", padx=10 )
+        lbDeficit.grid(row=14, column=0, sticky=tk.W)
         lbcostoTendencia = tk.Label(self.frame, text="costo Tendencia", padx=10 )
         lbcostoTendencia.grid(row=13, column=0, sticky=tk.W)
 
        
          #Creando un txt para el campo de texto "answer"
-        self.entrycostoTotal=tk.StringVar()
+        '''self.entrycostoTotal=tk.StringVar()
         self.entrycostoTotal.set("0")
         txtcostoTotal=tk.Entry(self.frame,textvariable=self.entrycostoTotal)
-        txtcostoTotal.grid(row=1, column=1)
+        txtcostoTotal.grid(row=1, column=1)'''
         self.entrydemandaA=tk.StringVar()
         self.entrydemandaA.set("1500")
         txtdemandaA=tk.Entry(self.frame,textvariable=self.entrydemandaA)
@@ -161,10 +192,10 @@ class Ventana():
         self.entrycostoUnid.set("0")
         txtcostoUnid=tk.Entry(self.frame,textvariable=self.entrycostoUnid)
         txtcostoUnid.grid(row=4, column=1)
-        self.entrycantidad=tk.StringVar()
+        '''self.entrycantidad=tk.StringVar()
         self.entrycantidad.set("0")
         txtcantidad=tk.Entry(self.frame,textvariable=self.entrycantidad)
-        txtcantidad.grid(row=5, column=1)
+        txtcantidad.grid(row=5, column=1)'''
         self.entrycostoSepara=tk.StringVar()
         self.entrycostoSepara.set("20")
         txtcostoSepara=tk.Entry(self.frame,textvariable=self.entrycostoSepara)
@@ -185,10 +216,10 @@ class Ventana():
         self.entrytiempo.set("1")
         txttiempo=tk.Entry(self.frame,textvariable=self.entrytiempo)
         txttiempo.grid(row=11, column=1)
-        self.entrycantEcon=tk.StringVar()
-        self.entrycantEcon.set("0")
-        txtcantEcon=tk.Entry(self.frame,textvariable=self.entrycantEcon)
-        txtcantEcon.grid(row=12, column=1)
+        self.entryDeficit=tk.StringVar()
+        self.entryDeficit.set("0")
+        txtDeficit=tk.Entry(self.frame,textvariable=self.entryDeficit)
+        txtDeficit.grid(row=14, column=1)
         self.entrycostoTendencia=tk.StringVar()
         self.entrycostoTendencia.set("0")
         txtcostoTendencia=tk.Entry(self.frame,textvariable=self.entrycostoTendencia)
@@ -199,7 +230,21 @@ class Ventana():
        wrap   = tk.WORD,
        width  = 25,
        height = 15.5
-)
+       )
+
+        OPTIONS = [
+            "EOQ SIN FALTANTES",
+            "EOQ CON FALTANTES",
+                  ] #etc
+        self.variable = tk.StringVar(self.window)
+        self.variable.set(OPTIONS[0]) 
+        w = tk.OptionMenu(self.window, self.variable, *OPTIONS)
+        w.pack()
+    
+
+
+
+       
 
         self.editArea.place(x=275,y=50)
 
@@ -207,6 +252,7 @@ class Ventana():
         #Definimos un tamaño mínimo de la fila central delgrid para que quede un espacio entre cada entry y posicionamos el frame
         self.frame.grid_rowconfigure(1, minsize=10)
         self.frame.place(x=8,y=50)
+
         
 
 
@@ -216,33 +262,67 @@ class Ventana():
         btnSave=tk.Button(self.window,text="Resolver",command=self.acciones,font=("Agency FB",14))
         btnSave.place(x=50,y=310)
 
+    def limpiarAreaText(self):
+        self.editArea.delete("1.0",tk.END)
+
 # Acciones que  se realizan  al Ejecutar Boton
     def acciones(self):
         #Carga de Datos
+        self.limpiarAreaText();
         self.editArea.insert(tk.INSERT,"")
         self.editArea.delete(1.0,1.0)
-        costoTotal=float(self.entrycostoTotal.get())
+        #costoTotal=float(self.entrycostoTotal.get())
         demandaA=float(self.entrydemandaA.get())
         demandaP=float(self.entrydemandaP.get())
         costoUnid=float(self.entrycostoUnid.get())
-        cantidad=float(self.entrycantidad.get())
+        #cantidad=float(self.entrycantidad.get())
         costoSepara=float(self.entrycostoSepara.get())
         nuePedido=0
         plazoRepo=float(self.entryplazoRepo.get())
         costoAManten=float(self.entrycostoAManten.get())
         tasaMan=float(self.entrytasaMan.get())
         tiempo=float(self.entrytiempo.get())
-        cantEcon=float(self.entrycantEcon.get())
+        #cantEcon=float(self.entrycantEcon.get())
         costoTendencia=float(self.entrycostoTendencia.get())
-        self.teoriaInventarios.eoqFija(costoTendencia,tiempo,costoTotal,demandaA,demandaP,costoUnid,cantidad,costoSepara,nuePedido,plazoRepo,costoAManten,tasaMan)
-        self.editArea.insert(tk.INSERT,
-            self.teoriaInventarios.catidadEconmica()+"\n"+
-            self.teoriaInventarios.nuevoPedido(demandaP,plazoRepo)+"\n"+
-            self.teoriaInventarios.plazoReemplazo(demandaA)+"\n"+
-            "• Costo Total "+str(self.teoriaInventarios.costeTotal())+"\n"+
-            "• El tiempo entre pedido se debe realizar es de" +str(self.teoriaInventarios.tiempoPedidos())+ "Años"+"\n")
+        self.teoriaInventarios.eoqFija(costoTendencia,tiempo,demandaA,demandaP,costoUnid,costoSepara,nuePedido,plazoRepo,costoAManten,tasaMan)
+        if(self.variable.get()=="EOQ SIN FALTANTES"):
+                mensaje= self.teoriaInventarios.catidadEconmica()+"\n"+self.teoriaInventarios.nuevoPedido(demandaP,plazoRepo)+"\n"+self.teoriaInventarios.plazoReemplazo(demandaA)+"\n"+"• Costo Total "+str(self.teoriaInventarios.costeTotal())+"\n"+"• El tiempo entre pedido se debe realizar es de "+str(self.tiempo(self.teoriaInventarios.tiempoPedidos())) +"\n"
+        else:
+            self.teoriaInventarios.conFaltantes(float(self.entryDeficit.get()))
+            mensaje=self.teoriaInventarios.canEconFalta() +"\n" +self.teoriaInventarios.maxconFalta()+"\n"+self.teoriaInventarios.costoTotalFalta()
+        self.editArea.insert(tk.INSERT,mensaje)
+        self.exportarInforme(mensaje)
+
+    def exportarInforme(self,mensaje):
+        w, h = A4
+        c = canvas.Canvas("reporte.pdf", pagesize=A4)
+        c.setFillColorRGB(0,0,1) #choose your font colour
+        c.setFont("Times-Roman", 20)
+        c.drawString(200, h - 95, "Reporte Análisis de Inventarios")
+        c.rect(30, h - 100, 530, 20)
+        c.line(30, h-120,560, h-120)
+        c.setFillColorRGB(0,0,0)
+        text = c.beginText(30, h - 150)
+        text.setFont("Times-Roman",12)
+        text.textLines(mensaje)
+        c.drawText(text)
+        c.line(30, h-250,560, h-250)
+        c.showPage()
+        c.save()
+
+    def tiempo(self,tiempoAnio):
+           mes,anio=math.modf(tiempoAnio)
+           dias,mes=math.modf(mes*12)
+           dias=math.floor(dias*30)
+           return str(anio)+" años "+str(mes)+" mes "+str(dias) +" dias"
+
+ 
+
 
         
+
+    
+    
 
 
              
