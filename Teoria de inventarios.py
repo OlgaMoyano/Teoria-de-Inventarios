@@ -1,22 +1,21 @@
 import math # Funciones matematicas
 import tkinter as tk # interfaz Grafica
 import tkinter.scrolledtext as tkst
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4 # Librerias  usadas para la creacion de  informes
 from reportlab.pdfgen import canvas
-from random import randint
+
 
 #Definicion de Variables
 
 # Ejemplo Practico
-
-"""UUna compañía se abastece actualmente de cierto producto solicitando una
+'''Una compañía se abastece actualmente de cierto producto solicitando una
  cantidad suficiente para satisfacer la demanda de un mes. La demanda anual
   del artículo es de 1500 unidades. Se estima que cada vez que hace un pedido
    se incurre en un costo de $20. El costo de almacenamiento por inventario 
    unitario por mes es de $2 y no se admite escasez.
 Determinar la cantidad de pedido óptima y el tiempo entre pedidos.
+'''
 
-"""
 class TeoriaInventarios():
     def __init__(self):
         #Definicion de Variables
@@ -58,7 +57,7 @@ class TeoriaInventarios():
     def setTasaMan(self,tasaMan):
             self.tasaMan=tasaMan
                 
-   
+   # inicializar variables
     def eoqFija(self,costoTendencia,tiempo,demandaA,demandaP,costoUnid,costoSepara,nuePedido,plazoRepo,costoAManten,tasaMan):
         self.tiempo=tiempo
         self.costoTotal=0
@@ -76,7 +75,10 @@ class TeoriaInventarios():
     def conFaltantes(self,deficit):
         self.maxFaltante=0
         self.canEcoFalt=0   
-        self.deficit=deficit          
+        self.deficit=deficit     
+
+#Aplicacion de  formulas para el  calculo de EOQ sin Faltantes      
+    #Calculo cantidad Economica
     
     def catidadEconmica (self):
         if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
@@ -85,28 +87,31 @@ class TeoriaInventarios():
         self.cantEcon=math.ceil(math.sqrt((2*self.demandaA*self.costoSepara)/self.costoAManten))
         return "• La cantidad que debe ordenarse es de "+str(self.cantEcon)+" unidades"
 
+    #Calculo costo de mantenimiento
     def costoMantenimiento(self):
-        self.costoAManten=self.costoTendencia*self.costoUnid;
+        self.costoAManten=self.tasaMan*self.costoUnid;
         
-
+    #Calculo de un nuevo pedido
     def nuevoPedido(self,demandaP,plazoRepo):
        self.tiempoPedidos()
        if demandaP==0:
-           demandaP=self.demandaP/(self.tiempo*360)
-       return "• El nuevo pedido se debe hacer cundo haya minimo " +str(math.ceil(demandaP*self.plazoRepo))+ " unidades"
+           demandaP=self.demandaA/365
+       return "• El nuevo pedido se debe hacer cuando haya minimo " +str(demandaP*self.tiempo)+ " unidades"
 
+    #Numero de pedidos
     def plazoReemplazo(self,demandaA):
        self.nPeriodo= math.ceil(demandaA/self.cantEcon)
        return "• Numero de pedidos por año es de " +str(self.nPeriodo)
 
+# tiempo entre pedidos
     def tiempoPedidos(self):
         self.plazoRepo=self.cantEcon/self.demandaA
         return self.plazoRepo
-
+#Costo Total
     def costeTotal(self):
         self.costoTotal=self.costoUnid*self.demandaA+(self.costoSepara*self.nPeriodo)+self.costoAManten*(self.cantEcon/2)
         return self.costoTotal
-
+#Cantidad Economia para EOQ con Faltantes
     def canEconFalta(self):
         if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
             if self.costoAManten==0:
@@ -114,7 +119,7 @@ class TeoriaInventarios():
         self.cantEcon=math.ceil(math.sqrt((2*self.costoSepara*self.demandaA*(self.deficit+self.costoAManten))/((self.deficit*self.costoAManten))))
         return "• La cantidad optima que debe ordenarse es de "+str(self.cantEcon)+" unidades"
 
-
+# cantida optimas Agotadas
     def maxconFalta(self):
         if self.demandaA==0 or self.costoSepara ==0 or  self.costoAManten==0:
             if self.costoAManten==0:
@@ -122,14 +127,14 @@ class TeoriaInventarios():
         self.maxFaltante=math.ceil(math.sqrt((2*self.costoSepara*self.demandaA*self.costoAManten)/(self.deficit*(self.deficit+self.costoAManten))))
         return "• La cantidad optima de unidades agotadas es de "+str(self.maxFaltante)+" unidades"
 
-  
+  # Costo Total Faltantes
     def costoTotalFalta(self):
         self.costoTotal=(self.costoUnid*self.demandaA)+(self.costoSepara*self.nPeriodo)+(self.costoAManten*(pow((self.cantEcon-self.maxFaltante),2)/2))+((pow(self.maxFaltante,2)/self.cantEcon)*self.deficit)/2
         return "Para un costo Total de "+str(self.costoTotal)
 
 
         
-            
+#### Diseño Grafico      
 
 class Ventana():
 
@@ -231,7 +236,7 @@ class Ventana():
        width  = 25,
        height = 15.5
        )
-
+ # opciones De desarrollo de problema de teoria de inventarios 
         OPTIONS = [
             "EOQ SIN FALTANTES",
             "EOQ CON FALTANTES",
@@ -292,6 +297,8 @@ class Ventana():
             mensaje=self.teoriaInventarios.canEconFalta() +"\n" +self.teoriaInventarios.maxconFalta()+"\n"+self.teoriaInventarios.costoTotalFalta()
         self.editArea.insert(tk.INSERT,mensaje)
         self.exportarInforme(mensaje)
+
+        #Generacion de  informe 
 
     def exportarInforme(self,mensaje):
         w, h = A4
